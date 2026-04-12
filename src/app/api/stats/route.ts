@@ -1,51 +1,39 @@
 import { NextResponse } from 'next/server';
-import { Client } from 'pg';
+import { neon } from '@neondatabase/serverless';
 
 export const revalidate = 0;
 
 export async function GET() {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-  });
+  const sql = neon(process.env.DATABASE_URL!);
 
   try {
-    await client.connect();
-
     // 1. Total findings detected (all time)
-    const totalFindingsRes = await client.query('SELECT COUNT(*) FROM findings');
-    const totalFindings = parseInt(totalFindingsRes.rows[0].count, 10);
+    const totalFindingsRes = await sql`SELECT COUNT(*) FROM findings`;
+    const totalFindings = parseInt(totalFindingsRes[0].count, 10);
 
     // 2. Total notifications sent (all time)
-    const totalNotifRes = await client.query(
-      'SELECT COUNT(*) FROM findings WHERE email_sent = true OR github_issue_url IS NOT NULL'
-    );
-    const totalNotifications = parseInt(totalNotifRes.rows[0].count, 10);
+    const totalNotifRes = await sql`SELECT COUNT(*) FROM findings WHERE email_sent = true OR github_issue_url IS NOT NULL`;
+    const totalNotifications = parseInt(totalNotifRes[0].count, 10);
 
     // 3. Findings in last 24h
-    const findings24hRes = await client.query(
-      "SELECT COUNT(*) FROM findings WHERE detected_at > NOW() - INTERVAL '24 hours'"
-    );
-    const findings24h = parseInt(findings24hRes.rows[0].count, 10);
+    const findings24hRes = await sql`SELECT COUNT(*) FROM findings WHERE detected_at > NOW() - INTERVAL '24 hours'`;
+    const findings24h = parseInt(findings24hRes[0].count, 10);
 
     // 4. Notifications sent in last 24h
-    const notif24hRes = await client.query(
-      "SELECT COUNT(*) FROM findings WHERE notified_at > NOW() - INTERVAL '24 hours'"
-    );
-    const notifications24h = parseInt(notif24hRes.rows[0].count, 10);
+    const notif24hRes = await sql`SELECT COUNT(*) FROM findings WHERE notified_at > NOW() - INTERVAL '24 hours'`;
+    const notifications24h = parseInt(notif24hRes[0].count, 10);
 
     // 5. Secret types breakdown
-    const breakdownRes = await client.query(`
+    const breakdownRes = await sql`
       SELECT secret_type, COUNT(*) as count 
       FROM findings 
       GROUP BY secret_type 
       ORDER BY count DESC
-    `);
-    const secretTypes = breakdownRes.rows.map(row => ({
+    `;
+    const secretTypes = breakdownRes.map((row: any) => ({
       type: row.secret_type,
       count: parseInt(row.count, 10)
     }));
-
-    await client.end();
 
     return NextResponse.json({
       totalFindings,
