@@ -42,8 +42,8 @@ export async function GET() {
       notifications24h,
       secretTypes
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error('API Error:', err);
-    return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch stats', message: err?.message || String(err) }, { status: 500 });
   }
 }
