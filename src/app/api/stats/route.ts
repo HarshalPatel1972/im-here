@@ -4,9 +4,16 @@ import { neon } from '@neondatabase/serverless';
 export const revalidate = 0;
 
 export async function GET() {
-  const sql = neon(process.env.DATABASE_URL!);
-
   try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        { error: 'Configuration Error', message: 'DATABASE_URL environment variable is missing on Vercel.' },
+        { status: 500 }
+      );
+    }
+
+    const sql = neon(process.env.DATABASE_URL);
+
     // 1. Total findings detected (all time)
     const totalFindingsRes = await sql`SELECT COUNT(*) FROM findings`;
     const totalFindings = parseInt(totalFindingsRes[0].count, 10);
